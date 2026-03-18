@@ -1,10 +1,13 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # MongoDB startup script following the same pattern
 DB_NAME="myapp"
 DB_USER="appuser"
 DB_PASSWORD="dbuser123"
 DB_PORT="5000"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Starting MongoDB setup..."
 
@@ -25,11 +28,14 @@ if mongosh --port ${DB_PORT} --eval "db.adminCommand('ping')" > /dev/null 2>&1; 
     echo "App user: appuser (password: ${DB_PASSWORD})"
     echo "Port: ${DB_PORT}"
     echo ""
+    echo "Ensuring MongoDB collections, indexes, and demo seed data..."
+    bash "${SCRIPT_DIR}/seed_demo_data.sh"
+    echo ""
     
     # Check if connection info file exists
-    if [ -f "db_connection.txt" ]; then
+    if [ -f "${SCRIPT_DIR}/db_connection.txt" ]; then
         echo "To connect to the database, use:"
-        echo "$(cat db_connection.txt)"
+        echo "$(cat "${SCRIPT_DIR}/db_connection.txt")"
     else
         echo "To connect to the database, use:"
         echo "mongosh mongodb://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?authSource=admin"
@@ -114,14 +120,17 @@ print("MongoDB setup complete!");
 EOF
 
 # Save connection command to a file
-echo "mongosh mongodb://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?authSource=admin" > db_connection.txt
-echo "Connection string saved to db_connection.txt"
+echo "mongosh mongodb://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?authSource=admin" > "${SCRIPT_DIR}/db_connection.txt"
+echo "Connection string saved to ${SCRIPT_DIR}/db_connection.txt"
 
 # Save environment variables to a file
-cat > db_visualizer/mongodb.env << EOF
+cat > "${SCRIPT_DIR}/db_visualizer/mongodb.env" << EOF
 export MONGODB_URL="mongodb://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/?authSource=admin"
 export MONGODB_DB="${DB_NAME}"
 EOF
+
+echo "Applying MongoDB collections, indexes, and demo seed data..."
+bash "${SCRIPT_DIR}/seed_demo_data.sh"
 
 echo "MongoDB setup complete!"
 echo "Database: ${DB_NAME}"
@@ -130,12 +139,12 @@ echo "App user: appuser (password: ${DB_PASSWORD})"
 echo "Port: ${DB_PORT}"
 echo ""
 
-echo "Environment variables saved to db_visualizer/mongodb.env"
-echo "To use with Node.js viewer, run: source db_visualizer/mongodb.env"
+echo "Environment variables saved to ${SCRIPT_DIR}/db_visualizer/mongodb.env"
+echo "To use with Node.js viewer, run: source ${SCRIPT_DIR}/db_visualizer/mongodb.env"
 
 echo "To connect to the database, use one of the following commands:"
 echo "mongosh -u ${DB_USER} -p ${DB_PASSWORD} --port ${DB_PORT} --authenticationDatabase admin ${DB_NAME}"
-echo "$(cat db_connection.txt)"
+echo "$(cat "${SCRIPT_DIR}/db_connection.txt")"
 
 # MongoDB continues running in background
 echo ""
